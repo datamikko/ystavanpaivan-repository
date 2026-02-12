@@ -25,6 +25,11 @@ If you do not know... try saying hello nicely and see what happens. 💖
 No spoilers in this README.  
 Some magic is better discovered than explained. ✨
 
+## Live Deployment 💖
+
+Visit the happy heart machine here:  
+[💖 Ystavanpaiva Heart Detector 💖](https://datamikko.github.io/ystavanpaivan-repository/)
+
 ## License potato info 🥔
 
 The official cosmic legal text lives in `LICENSE`.  

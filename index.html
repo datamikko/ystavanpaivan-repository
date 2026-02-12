@@ -333,12 +333,41 @@
             heartLine.className = "heart pulse";
         }
 
+        async function requestCameraPermissionPrompt() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                throw new Error("NO_MEDIA_DEVICES");
+            }
+
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            stream.getTracks().forEach((track) => track.stop());
+        }
+
+        function getFriendlyCameraError(error) {
+            if (error && (error.name === "NotAllowedError" || error.name === "PermissionDeniedError")) {
+                return "Please allow camera access in your browser and try again.";
+            }
+
+            if (error && (error.name === "NotFoundError" || error.name === "DevicesNotFoundError")) {
+                return "No camera found on this device.";
+            }
+
+            if (error && error.message === "NO_MEDIA_DEVICES") {
+                return "Camera is not supported in this browser.";
+            }
+
+            return "Could not start camera. Please refresh and try again.";
+        }
+
         async function start() {
             if (isRunning) return;
             startBtn.disabled = true;
             stateText.textContent = "Loading the love detector...";
 
             try {
+                stateText.textContent = "Requesting camera permission...";
+                await requestCameraPermissionPrompt();
+
+                stateText.textContent = "Loading the love detector...";
                 if (!model) {
                     model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
                 }
@@ -355,7 +384,7 @@
                 loop();
             } catch (error) {
                 applySceneClass("idle");
-                stateText.textContent = "Camera permission is needed to continue.";
+                stateText.textContent = getFriendlyCameraError(error);
                 startBtn.disabled = false;
             }
         }
