@@ -250,8 +250,8 @@
         </div>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.4-alpha2/dist/teachablemachine-image.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     <script>
         const MODEL_URL = "https://teachablemachine.withgoogle.com/models/KEawbhamB/";
         const HEART_THRESHOLD = 0.7;
@@ -334,18 +334,11 @@
             heartLine.className = "heart pulse";
         }
 
-        async function requestCameraPermissionPrompt() {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                throw new Error("NO_MEDIA_DEVICES");
+        function getFriendlyCameraError(error) {
+            if (error && error.message === "TMIMAGE_NOT_LOADED") {
+                return "Could not load the heart detector library. Check connection and refresh.";
             }
 
-            console.log("[HeartDetector] Requesting getUserMedia permission prompt.");
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            console.log("[HeartDetector] getUserMedia permission granted.");
-            stream.getTracks().forEach((track) => track.stop());
-        }
-
-        function getFriendlyCameraError(error) {
             if (error && typeof error.message === "string" && (error.message.includes("model.json") || error.message.includes("metadata.json"))) {
                 return "Camera started, but model loading failed. Check network and refresh.";
             }
@@ -356,10 +349,6 @@
 
             if (error && (error.name === "NotFoundError" || error.name === "DevicesNotFoundError")) {
                 return "No camera found on this device.";
-            }
-
-            if (error && error.message === "NO_MEDIA_DEVICES") {
-                return "Camera is not supported in this browser.";
             }
 
             return "Could not start camera. Please refresh and try again.";
@@ -392,25 +381,11 @@
             console.log("[HeartDetector] Start clicked, beginning startup flow.");
 
             try {
-                // Start webcam first while we are still in direct click flow.
-                webcam = new tmImage.Webcam(320, 320, true);
-                try {
-                    console.log("[HeartDetector] Calling webcam.setup()...");
-                    await webcam.setup();
-                    console.log("[HeartDetector] webcam.setup() succeeded, calling webcam.play()...");
-                    await webcam.play();
-                    console.log("[HeartDetector] webcam.play() succeeded.");
-                } catch (cameraError) {
-                    // Retry once via explicit browser permission request.
-                    console.warn("[HeartDetector] Initial webcam setup failed, retrying after explicit permission prompt.", cameraError);
-                    await requestCameraPermissionPrompt();
-                    console.log("[HeartDetector] Retrying webcam.setup()...");
-                    await webcam.setup();
-                    console.log("[HeartDetector] Retrying webcam.play()...");
-                    await webcam.play();
-                    console.log("[HeartDetector] Webcam started after retry.");
+                if (!window.tmImage) {
+                    throw new Error("TMIMAGE_NOT_LOADED");
                 }
 
+                // Follow Teachable Machine reference flow: load model first, then webcam.
                 stateText.textContent = "Loading the love detector...";
                 if (!model) {
                     console.log("[HeartDetector] Loading model and metadata...", MODEL_URL);
@@ -420,6 +395,13 @@
                     console.log("[HeartDetector] Reusing already-loaded model.");
                 }
 
+                webcam = new tmImage.Webcam(320, 320, true);
+                console.log("[HeartDetector] Calling webcam.setup()...");
+                await webcam.setup();
+                console.log("[HeartDetector] webcam.setup() succeeded, calling webcam.play()...");
+                await webcam.play();
+                console.log("[HeartDetector] webcam.play() succeeded.");
+
                 webcamContainer.innerHTML = "";
                 webcamContainer.appendChild(webcam.canvas);
                 webcamContainer.style.display = "grid";
@@ -428,7 +410,7 @@
                 isStarting = false;
                 setWaitingState();
                 console.log("[HeartDetector] Startup complete, entering prediction loop.");
-                loop();
+                animationId = window.requestAnimationFrame(loop);
             } catch (error) {
                 applySceneClass("idle");
                 cleanupWebcamUI();
