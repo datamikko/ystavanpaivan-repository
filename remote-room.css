@@ -1,0 +1,168 @@
+.remote-room-panel {
+    width: min(860px, 100%);
+    margin-top: 6px;
+    padding: 14px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.58);
+    border: 1px solid rgba(255, 255, 255, 0.88);
+    box-shadow: 0 10px 24px rgba(76, 23, 46, 0.18);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-align: left;
+    backdrop-filter: blur(5px);
+}
+
+.remote-room-title {
+    margin: 0;
+    font-size: 1.08rem;
+    color: #7d224b;
+}
+
+.remote-room-line {
+    margin: 0;
+    color: #7a2d51;
+    font-size: 0.92rem;
+    line-height: 1.35;
+}
+
+#remote-status.remote-error {
+    color: #a72853;
+    font-weight: 700;
+}
+
+.remote-room-row {
+    display: grid;
+    grid-template-columns: minmax(150px, 1fr) repeat(3, auto);
+    align-items: end;
+    gap: 8px;
+}
+
+.remote-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.remote-field label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #6c2747;
+}
+
+.remote-field input {
+    width: 100%;
+    border-radius: 10px;
+    border: 1px solid rgba(129, 42, 81, 0.35);
+    padding: 8px 10px;
+    font-size: 0.9rem;
+    color: #57203b;
+    background: rgba(255, 255, 255, 0.88);
+}
+
+.remote-room-panel button {
+    border: 0;
+    border-radius: 999px;
+    padding: 8px 12px;
+    background: #cb2e68;
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 7px 16px rgba(166, 35, 85, 0.24);
+    transition: transform 0.14s ease, filter 0.14s ease;
+}
+
+.remote-room-panel button:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.03);
+}
+
+.remote-room-panel button:disabled {
+    opacity: 0.62;
+    cursor: default;
+    transform: none;
+    filter: none;
+    box-shadow: none;
+}
+
+.remote-box {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(137, 49, 88, 0.2);
+}
+
+.remote-box label {
+    color: #6c2747;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.remote-box textarea {
+    width: 100%;
+    min-height: 68px;
+    resize: vertical;
+    border-radius: 10px;
+    border: 1px solid rgba(139, 53, 91, 0.28);
+    background: #fff;
+    color: #55203a;
+    font-size: 0.82rem;
+    line-height: 1.3;
+    padding: 8px 10px;
+}
+
+.remote-box button {
+    align-self: flex-end;
+}
+
+.remote-participants {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 6px;
+}
+
+.remote-participants li {
+    border-radius: 10px;
+    padding: 8px 10px;
+    border: 1px solid rgba(137, 49, 88, 0.22);
+    background: rgba(255, 255, 255, 0.75);
+    color: #5d2841;
+    font-size: 0.85rem;
+}
+
+.remote-participants li.state-heart {
+    border-color: rgba(211, 38, 101, 0.52);
+    background: rgba(255, 214, 232, 0.76);
+    font-weight: 700;
+}
+
+.remote-participants li.state-pending {
+    opacity: 0.72;
+}
+
+.remote-hidden {
+    display: none !important;
+}
+
+@media (max-width: 860px) {
+    .remote-room-row {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .remote-room-row {
+        grid-template-columns: 1fr;
+    }
+
+    .remote-box button {
+        width: 100%;
+        align-self: stretch;
+    }
+}

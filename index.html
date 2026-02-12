@@ -13,7 +13,8 @@
             margin: 0;
             min-height: 100dvh;
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
             transition: background 0.45s ease;
         }
 
@@ -231,6 +232,7 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="remote-room.css">
 </head>
 <body>
     <main class="app">
@@ -241,6 +243,44 @@
             <p id="state-text" class="state-text"></p>
             <div id="heart-line" class="heart" aria-hidden="true">❤ ❤ ❤</div>
             <div id="webcam-container" style="display: none;"></div>
+
+            <section id="remote-room-panel" class="remote-room-panel">
+                <h2 class="remote-room-title">Remote Hearts Room (WebRTC)</h2>
+                <p id="remote-room-headline" class="remote-room-line">Create a room to invite remote friends.</p>
+                <p id="remote-room-code" class="remote-room-line">Room code: -</p>
+
+                <div class="remote-room-row">
+                    <div class="remote-field">
+                        <label for="remote-display-name">Your name</label>
+                        <input id="remote-display-name" type="text" maxlength="24" placeholder="Friend">
+                    </div>
+                    <button id="remote-create-room-btn" type="button">Create room</button>
+                    <button id="remote-create-invite-btn" type="button" disabled>Generate invite</button>
+                    <button id="remote-reset-room-btn" type="button" disabled>Reset room</button>
+                </div>
+
+                <div class="remote-box">
+                    <label for="remote-invite-output">Invite link (send to friend)</label>
+                    <textarea id="remote-invite-output" readonly placeholder="Create a room, then generate an invite link."></textarea>
+                    <button id="remote-copy-invite-btn" type="button" disabled>Copy invite link</button>
+                </div>
+
+                <div class="remote-box">
+                    <label for="remote-answer-input">Answer link from friend</label>
+                    <textarea id="remote-answer-input" placeholder="Paste answer link from your friend here."></textarea>
+                    <button id="remote-apply-answer-btn" type="button" disabled>Apply answer</button>
+                </div>
+
+                <div id="remote-join-box" class="remote-box remote-hidden">
+                    <label for="remote-answer-output">Your response link (send back to host)</label>
+                    <textarea id="remote-answer-output" readonly placeholder="Open an invite link first to generate this."></textarea>
+                    <button id="remote-copy-answer-btn" type="button" disabled>Copy response link</button>
+                </div>
+
+                <p id="remote-status" class="remote-room-line">No active WebRTC room.</p>
+                <p id="remote-summary" class="remote-room-line">Participants: just you.</p>
+                <ul id="remote-participants" class="remote-participants"></ul>
+            </section>
         </section>
         <div class="dev-controls hidden">
             <button id="dev-waiting-btn" class="dev-btn" type="button">Dev waiting</button>
@@ -313,22 +353,34 @@
             applySceneClass("idle");
             stateText.textContent = "Tap start and spread some Valentine joy at the office.";
             heartLine.className = "heart";
+            if (window.remoteRoom && typeof window.remoteRoom.onLocalStateChange === "function") {
+                window.remoteRoom.onLocalStateChange("idle");
+            }
         }
 
         function setWaitingState() {
             applySceneClass("waiting");
             stateText.textContent = "Waiting for a friend...";
             heartLine.className = "heart";
+            if (window.remoteRoom && typeof window.remoteRoom.onLocalStateChange === "function") {
+                window.remoteRoom.onLocalStateChange("waiting");
+            }
         }
 
         function setFriendState() {
             applySceneClass("friend");
+            if (window.remoteRoom && typeof window.remoteRoom.onLocalStateChange === "function") {
+                window.remoteRoom.onLocalStateChange("friend");
+            }
             stateText.textContent = "Hello friend! Show a heart to your friends 💖";
             heartLine.className = "heart";
         }
 
         function setHeartState() {
             applySceneClass("heart");
+            if (window.remoteRoom && typeof window.remoteRoom.onLocalStateChange === "function") {
+                window.remoteRoom.onLocalStateChange("heart");
+            }
             stateText.textContent = "💖 💖 Your friend hearts you too! 💖 💖";
             heartLine.textContent = "❤ ❤ ❤";
             heartLine.className = "heart pulse";
@@ -485,5 +537,7 @@
             setWaitingState();
         }
     </script>
+    <script src="remote-room.js"></script>
 </body>
 </html>
+
