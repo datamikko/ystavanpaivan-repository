@@ -54,7 +54,7 @@
 
         .float-hearts::before,
         .float-hearts::after {
-            content: "❤  ❤  ❤  ❤  ❤  ❤  ❤";
+            content: "\2764  \2764  \2764  \2764  \2764  \2764  \2764";
             position: absolute;
             left: -10%;
             width: 120%;
@@ -239,46 +239,84 @@
         <section class="stage">
             <div class="float-hearts" aria-hidden="true"></div>
             <h1 class="header">Happy Ystavanpaiva</h1>
-            <button id="start-btn" type="button">❤ Start</button>
+            <button id="start-btn" type="button">&#10084; Start</button>
             <p id="state-text" class="state-text"></p>
-            <div id="heart-line" class="heart" aria-hidden="true">❤ ❤ ❤</div>
+            <div id="heart-line" class="heart" aria-hidden="true">&#10084; &#10084; &#10084;</div>
             <div id="webcam-container" style="display: none;"></div>
 
             <section id="remote-room-panel" class="remote-room-panel">
                 <h2 class="remote-room-title">Remote Hearts Room (WebRTC)</h2>
-                <p id="remote-room-headline" class="remote-room-line">Create a room to invite remote friends.</p>
+                <div class="remote-mode-switch" role="tablist" aria-label="Remote room mode">
+                    <button id="remote-mode-host-btn" class="remote-mode-btn remote-mode-active" type="button" role="tab" aria-selected="true">Host room</button>
+                    <button id="remote-mode-join-btn" class="remote-mode-btn" type="button" role="tab" aria-selected="false">Join room</button>
+                </div>
+                <p id="remote-room-headline" class="remote-room-line">Host mode: create a room and invite a friend.</p>
                 <p id="remote-room-code" class="remote-room-line">Room code: -</p>
+                <p id="remote-status" class="remote-status-banner">No active WebRTC room.</p>
 
-                <div class="remote-room-row">
-                    <div class="remote-field">
-                        <label for="remote-display-name">Your name</label>
-                        <input id="remote-display-name" type="text" maxlength="24" placeholder="Friend">
+                <ol id="remote-host-steps" class="remote-stepper">
+                    <li id="remote-host-step-1">Create room</li>
+                    <li id="remote-host-step-2">Share invite link</li>
+                    <li id="remote-host-step-3">Paste friend's response link</li>
+                    <li id="remote-host-step-4">Connected</li>
+                </ol>
+
+                <ol id="remote-join-steps" class="remote-stepper remote-hidden">
+                    <li id="remote-join-step-1">Open invite link</li>
+                    <li id="remote-join-step-2">Generate response link</li>
+                    <li id="remote-join-step-3">Send response to host</li>
+                    <li id="remote-join-step-4">Connected</li>
+                </ol>
+
+                <div class="remote-field">
+                    <label for="remote-display-name">Your name</label>
+                    <input id="remote-display-name" type="text" maxlength="24" placeholder="Friend">
+                </div>
+
+                <div id="remote-host-flow">
+                    <div class="remote-room-row">
+                        <button id="remote-create-room-btn" class="remote-primary-btn" type="button">1. Create room</button>
+                        <button id="remote-create-invite-btn" class="remote-primary-btn" type="button" disabled>2. Generate invite</button>
+                        <button id="remote-reset-room-btn" type="button" disabled>Reset room</button>
                     </div>
-                    <button id="remote-create-room-btn" type="button">Create room</button>
-                    <button id="remote-create-invite-btn" type="button" disabled>Generate invite</button>
-                    <button id="remote-reset-room-btn" type="button" disabled>Reset room</button>
+
+                    <div class="remote-box">
+                        <label for="remote-invite-output">Invite link (send to friend)</label>
+                        <p class="remote-help">Friend opens this link to generate a response link.</p>
+                        <textarea id="remote-invite-output" readonly placeholder="Create a room, then generate an invite link."></textarea>
+                        <button id="remote-copy-invite-btn" type="button" disabled>Copy invite link</button>
+                    </div>
+
+                    <div class="remote-box">
+                        <label for="remote-answer-input">Response link from friend</label>
+                        <p class="remote-help">Friend sends this back after opening your invite link.</p>
+                        <textarea id="remote-answer-input" placeholder="Paste response link from your friend here."></textarea>
+                        <button id="remote-apply-answer-btn" class="remote-primary-btn" type="button" disabled>3. Apply response</button>
+                    </div>
                 </div>
 
-                <div class="remote-box">
-                    <label for="remote-invite-output">Invite link (send to friend)</label>
-                    <textarea id="remote-invite-output" readonly placeholder="Create a room, then generate an invite link."></textarea>
-                    <button id="remote-copy-invite-btn" type="button" disabled>Copy invite link</button>
+                <div id="remote-join-flow" class="remote-hidden">
+                    <div class="remote-box">
+                        <label for="remote-offer-input">Invite link from host</label>
+                        <p class="remote-help">Example: ...#offer=TOKEN</p>
+                        <textarea id="remote-offer-input" placeholder="Paste invite link here, then generate your response link."></textarea>
+                        <button id="remote-generate-response-btn" class="remote-primary-btn" type="button">1. Generate response</button>
+                    </div>
+
+                    <div id="remote-join-box" class="remote-box">
+                        <label for="remote-answer-output">Your response link (send back to host)</label>
+                        <p class="remote-help">Host pastes this into "Response link from friend".</p>
+                        <textarea id="remote-answer-output" readonly placeholder="Open an invite link first to generate this."></textarea>
+                        <button id="remote-copy-answer-btn" class="remote-primary-btn" type="button" disabled>2. Copy response link</button>
+                    </div>
                 </div>
 
-                <div class="remote-box">
-                    <label for="remote-answer-input">Answer link from friend</label>
-                    <textarea id="remote-answer-input" placeholder="Paste answer link from your friend here."></textarea>
-                    <button id="remote-apply-answer-btn" type="button" disabled>Apply answer</button>
-                </div>
-
-                <div id="remote-join-box" class="remote-box remote-hidden">
-                    <label for="remote-answer-output">Your response link (send back to host)</label>
-                    <textarea id="remote-answer-output" readonly placeholder="Open an invite link first to generate this."></textarea>
-                    <button id="remote-copy-answer-btn" type="button" disabled>Copy response link</button>
-                </div>
-
-                <p id="remote-status" class="remote-room-line">No active WebRTC room.</p>
                 <p id="remote-summary" class="remote-room-line">Participants: just you.</p>
+                <p id="remote-next-action" class="remote-next-action">Next: choose Host room or Join room.</p>
+                <div id="remote-empty-state" class="remote-empty-state">
+                    <strong>No remote participants yet.</strong>
+                    <span>Start with step 1 in your selected mode.</span>
+                </div>
                 <ul id="remote-participants" class="remote-participants"></ul>
             </section>
         </section>
@@ -372,7 +410,7 @@
             if (window.remoteRoom && typeof window.remoteRoom.onLocalStateChange === "function") {
                 window.remoteRoom.onLocalStateChange("friend");
             }
-            stateText.textContent = "Hello friend! Show a heart to your friends 💖";
+            stateText.textContent = "Hello friend! Show a heart to your friends.";
             heartLine.className = "heart";
         }
 
@@ -381,8 +419,8 @@
             if (window.remoteRoom && typeof window.remoteRoom.onLocalStateChange === "function") {
                 window.remoteRoom.onLocalStateChange("heart");
             }
-            stateText.textContent = "💖 💖 Your friend hearts you too! 💖 💖";
-            heartLine.textContent = "❤ ❤ ❤";
+            stateText.textContent = "Your friend hearts you too!";
+            heartLine.textContent = "\u2764 \u2764 \u2764";
             heartLine.className = "heart pulse";
         }
 
@@ -421,7 +459,7 @@
 
         async function start() {
             if (isRunning) {
-                stateText.textContent = "Already running! Wave or show a heart 💖";
+                stateText.textContent = "Already running! Wave or show a heart.";
                 console.log("[HeartDetector] Start ignored: session already running.");
                 return;
             }
