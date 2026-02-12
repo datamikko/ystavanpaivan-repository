@@ -19,6 +19,13 @@
     color: #7d224b;
 }
 
+.remote-intro {
+    margin: 0;
+    color: #773451;
+    font-size: 0.85rem;
+    line-height: 1.35;
+}
+
 .remote-mode-switch {
     display: inline-flex;
     border-radius: 999px;
@@ -107,7 +114,7 @@
 
 .remote-room-row {
     display: grid;
-    grid-template-columns: repeat(3, minmax(130px, auto));
+    grid-template-columns: repeat(2, minmax(170px, auto));
     align-items: end;
     gap: 8px;
 }
@@ -137,10 +144,10 @@
 .remote-room-panel button {
     border: 0;
     border-radius: 999px;
-    padding: 8px 12px;
+    padding: 9px 13px;
     background: #cb2e68;
     color: #fff;
-    font-size: 0.82rem;
+    font-size: 0.84rem;
     font-weight: 700;
     cursor: pointer;
     box-shadow: 0 7px 16px rgba(166, 35, 85, 0.24);
@@ -201,7 +208,7 @@
 
 .remote-box textarea {
     width: 100%;
-    min-height: 68px;
+    min-height: 74px;
     resize: vertical;
     border-radius: 10px;
     border: 1px solid rgba(139, 53, 91, 0.28);
@@ -214,6 +221,22 @@
 
 .remote-box button {
     align-self: flex-end;
+}
+
+.remote-inline-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.remote-hidden-url {
+    position: absolute !important;
+    left: -9999px !important;
+    width: 1px !important;
+    height: 1px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 .remote-next-action {
@@ -372,7 +395,7 @@
 
 @media (max-width: 860px) {
     .remote-room-row {
-        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-columns: 1fr 1fr;
     }
 }
 
@@ -394,6 +417,16 @@
     .remote-box button {
         width: 100%;
         align-self: stretch;
+    }
+
+    .remote-inline-actions {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .remote-inline-actions button {
+        width: 100%;
     }
 
     .remote-card-top {

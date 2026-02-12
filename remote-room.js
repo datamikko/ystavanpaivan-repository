@@ -86,13 +86,13 @@
 
     processHandshakeFromLocation().catch(function (error) {
         console.error("[RemoteRoom] Initial handshake parse failed:", error);
-        setStatus("Could not process handshake link.", true);
+        setStatus("Could not read that link. Ask for a fresh one.", true);
     });
 
     window.addEventListener("hashchange", function () {
         processHandshakeFromLocation().catch(function (error) {
             console.error("[RemoteRoom] Hashchange handshake parse failed:", error);
-            setStatus("Could not process handshake link.", true);
+            setStatus("Could not read that link. Ask for a fresh one.", true);
         });
     });
 
@@ -112,28 +112,28 @@
         ui.createInviteBtn.addEventListener("click", function () {
             createInviteLink().catch(function (error) {
                 console.error("[RemoteRoom] Create invite failed:", error);
-                setStatus("Failed to generate invite link.", true);
+                setStatus("Could not create a share link. Please try again.", true);
             });
         });
         ui.resetRoomBtn.addEventListener("click", resetRoom);
         ui.applyAnswerBtn.addEventListener("click", function () {
             applyAnswerFromInput().catch(function (error) {
                 console.error("[RemoteRoom] Apply response failed:", error);
-                setStatus(error.message || "Failed to apply response link.", true);
+                setStatus(error.message || "Could not use that reply link.", true);
             });
         });
         ui.generateResponseBtn.addEventListener("click", function () {
             joinFromInviteInput().catch(function (error) {
                 console.error("[RemoteRoom] Generate response failed:", error);
-                setStatus(error.message || "Could not generate response link from invite.", true);
+                setStatus(error.message || "Could not create a reply link from that invite.", true);
             });
         });
 
         ui.copyInviteBtn.addEventListener("click", function () {
-            copyValue(ui.inviteOutput.value, "Invite link copied.", "Create an invite link first.");
+            copyValue(ui.inviteOutput.value, "Share link copied.", "Create a share link first.");
         });
         ui.copyAnswerBtn.addEventListener("click", function () {
-            copyValue(ui.answerOutput.value, "Response link copied.", "Open an invite link first.");
+            copyValue(ui.answerOutput.value, "Reply link copied.", "Create a reply link first.");
         });
 
         ui.displayName.addEventListener("input", function () {
@@ -343,7 +343,7 @@
     }
 
     function updateRoomCodeLine() {
-        ui.roomCode.textContent = state.roomCode ? ("Room code: " + state.roomCode) : "Room code: -";
+        ui.roomCode.textContent = state.roomCode ? ("Session code: " + state.roomCode) : "Session code: -";
     }
 
     function renderAll() {
@@ -368,7 +368,7 @@
         ui.joinFlow.classList.toggle("remote-hidden", mode !== "join");
 
         ui.createInviteBtn.disabled = !(mode === "host" && isHost);
-        ui.applyAnswerBtn.disabled = !(mode === "host" && isHost);
+        ui.applyAnswerBtn.disabled = !(mode === "host" && isHost && state.pendingInvites.size > 0);
         ui.answerInput.disabled = !(mode === "host" && isHost);
         ui.generateResponseBtn.disabled = mode !== "join";
         ui.resetRoomBtn.disabled = !(isHost || isGuest);
@@ -385,17 +385,17 @@
 
         if (normalized === "host") {
             setHeadline(state.role === "host"
-                ? "Host mode: share invite links and apply response links."
-                : "Host mode: create a room and invite a friend.");
+                ? "Invite mode: send your link and connect with your friend."
+                : "Invite mode: create a room and send your link.");
             if (state.role !== "host") {
-                setStatus("Create a room, then share invite link with a friend.", "progress");
+                setStatus("Start by creating a room, then send your share link.", "progress");
             }
         } else {
             setHeadline(state.role === "guest"
-                ? "Join mode: share your response link back to the host."
-                : "Join mode: paste an invite link to generate your response.");
+                ? "Join mode: send your reply link back to your friend."
+                : "Join mode: paste your friend's invite link.");
             if (state.role !== "guest") {
-                setStatus("Paste an invite link, then generate your response link.", "progress");
+                setStatus("Open your friend's invite link directly, or use clipboard import below.", "progress");
             }
         }
 
@@ -403,9 +403,16 @@
     }
 
     async function joinFromInviteInput() {
-        const token = parseTokenFromText(ui.offerInput.value, "offer");
+        let token = parseTokenFromText(ui.offerInput.value, "offer");
         if (!token) {
-            setStatus("Paste an invite link from host first.", true);
+            const clipboard = await readClipboardText();
+            if (clipboard) {
+                ui.offerInput.value = clipboard;
+                token = parseTokenFromText(clipboard, "offer");
+            }
+        }
+        if (!token) {
+            setStatus("Could not find an invite link in clipboard. Open the link directly or copy it first.", true);
             return;
         }
         setUiMode("join");
@@ -487,7 +494,7 @@
     function renderParticipants() {
         let participants = [];
         let hasRemoteParticipants = false;
-        let emptyTitle = "No remote participants yet.";
+        let emptyTitle = "No one is connected yet.";
         let emptyHint = "Start with step 1 in your selected mode.";
 
         if (state.role === "host") {
@@ -501,12 +508,12 @@
             const hearts = participants.filter(function (p) {
                 return p.state === "heart" && !p.isHost;
             }).length;
-            ui.summary.textContent = "Room " + state.roomCode + ": " + (connected + 1) + " connected, " + hearts + " remote heart(s), " + pending + " pending invite(s).";
+            ui.summary.textContent = "Session " + state.roomCode + ": you + " + connected + " friend(s) connected, " + pending + " waiting, " + hearts + " heart signal(s).";
             hasRemoteParticipants = participants.some(function (p) {
                 return !p.isHost;
             });
-            emptyTitle = "No friends have joined this host room yet.";
-            emptyHint = "Generate an invite link, send it, then apply the response link.";
+            emptyTitle = "No friend has joined yet.";
+            emptyHint = "Create a share link, send it, then copy and apply the reply link.";
         } else if (state.role === "guest") {
             participants = collectGuestParticipants();
             const remoteHearts = participants.filter(function (p) {
@@ -514,13 +521,13 @@
             }).length;
             const connectedToHost = !!(state.guestPeer && state.guestPeer.channel && state.guestPeer.channel.readyState === "open");
             ui.summary.textContent = connectedToHost
-                ? ("Connected to room " + state.roomCode + ". Remote heart(s): " + remoteHearts + ".")
-                : ("Room " + state.roomCode + ": response ready, waiting for host to apply it.");
+                ? ("Connected in session " + state.roomCode + ". Heart signal(s): " + remoteHearts + ".")
+                : ("Session " + state.roomCode + ": reply link ready, waiting for your friend to connect.");
             hasRemoteParticipants = participants.some(function (p) {
                 return p.id !== state.localPeerId;
             });
-            emptyTitle = "No host connection yet.";
-            emptyHint = "Paste host invite and generate your response link.";
+            emptyTitle = "Not connected yet.";
+            emptyHint = "Open the invite link directly, or copy it first and use the button.";
         } else {
             participants = [{
                 id: state.localPeerId,
@@ -534,8 +541,8 @@
             }];
             ui.summary.textContent = "Participants: just you.";
             hasRemoteParticipants = false;
-            emptyTitle = "No remote participants yet.";
-            emptyHint = "Choose Host room or Join room to start.";
+            emptyTitle = "No one is connected yet.";
+            emptyHint = "Choose invite mode or join mode to start.";
         }
 
         ui.nextAction.textContent = "Next: " + resolveNextAction();
@@ -549,37 +556,37 @@
     function resolveNextAction() {
         if (state.uiMode === "host") {
             if (state.role !== "host") {
-                return "click \"1. Create room\".";
+                return "click \"1. Start inviting\".";
             }
             if (!ui.inviteOutput.value.trim()) {
-                return "click \"2. Generate invite\" and share the link.";
+                return "click \"2. Create share link\" and send it to your friend.";
             }
             if (state.hostPeers.size === 0) {
-                return "paste your friend's response link and click \"3. Apply response\".";
+                return "ask your friend for the reply link, copy it, then click \"3. Connect using reply link\".";
             }
             const hasOpenPeer = Array.from(state.hostPeers.values()).some(function (context) {
                 return context.channel && context.channel.readyState === "open";
             });
             if (!hasOpenPeer) {
-                return "wait for WebRTC connection to open.";
+                return "wait a few seconds for the connection to finish.";
             }
-            return "ask your friend to show a heart and watch live sync.";
+            return "you are connected; ask your friend to show a heart.";
         }
 
         if (state.role !== "guest") {
-            return "paste host invite link and click \"1. Generate response\".";
+            return "open your friend's invite link, or copy it and click \"1. Use invite link from clipboard\".";
         }
 
         if (!ui.answerOutput.value.trim()) {
-            return "copy your generated response link and send it to host.";
+            return "copy your reply link and send it back to your friend.";
         }
 
         const connectedToHost = !!(state.guestPeer && state.guestPeer.channel && state.guestPeer.channel.readyState === "open");
         if (!connectedToHost) {
-            return "wait for host to apply your response link.";
+            return "wait for your friend to connect using your reply link.";
         }
 
-        return "show a heart to verify remote state sync.";
+        return "you are connected; show a heart to test it.";
     }
 
     function renderEmptyState(show, title, hint) {
@@ -649,7 +656,7 @@
     function formatStatus(value) {
         if (value === "open") return "connected";
         if (value === "local") return "local";
-        if (value === "awaiting response") return "awaiting response";
+        if (value === "awaiting response") return "waiting for reply";
         if (value === "connecting") return "negotiating";
         if (value === "closed") return "closed";
         return value || "connected";
@@ -704,7 +711,7 @@
                 status: "awaiting response",
                 quality: "unknown",
                 rttMs: null,
-                hint: "Waiting for your friend to send back response link.",
+                hint: "Waiting for your friend to send back the reply link.",
                 isHost: false
             });
         });
@@ -747,7 +754,7 @@
                 status: state.guestPeer && state.guestPeer.channel ? state.guestPeer.channel.readyState : "connecting",
                 quality: state.guestPeer ? (state.guestPeer.quality || "unknown") : "unknown",
                 rttMs: state.guestPeer && typeof state.guestPeer.rttMs === "number" ? state.guestPeer.rttMs : null,
-                hint: state.guestPeer ? "Direct connection to host." : "Waiting for host to apply your response.",
+                hint: state.guestPeer ? "Direct connection to your friend." : "Waiting for your friend to connect using your reply link.",
                 isHost: true
             });
         }
@@ -785,8 +792,8 @@
         ui.answerInput.value = "";
         ui.answerOutput.value = "";
 
-        setHeadline("Host mode: room " + state.roomCode + " is ready.");
-        setStatus("Step 2: generate invite link and share it with your friend.", "progress");
+        setHeadline("Invite mode: session " + state.roomCode + " is ready.");
+        setStatus("Step 2: create your share link and send it to your friend.", "progress");
         renderAll();
     }
 
@@ -804,11 +811,11 @@
         ui.answerOutput.value = "";
 
         if (state.uiMode === "host") {
-            setHeadline("Host mode: create a room and invite a friend.");
-            setStatus("No active WebRTC room. Start from step 1.", "progress");
+            setHeadline("Invite mode: create a room and send your link.");
+            setStatus("No active session yet. Start from step 1.", "progress");
         } else {
-            setHeadline("Join mode: paste an invite link to generate your response.");
-            setStatus("No active WebRTC room. Start from step 1.", "progress");
+            setHeadline("Join mode: paste your friend's invite link.");
+            setStatus("No active session yet. Start from step 1.", "progress");
         }
         renderAll();
     }
@@ -888,7 +895,7 @@
             if (pc.connectionState === "failed") {
                 removeContext(context);
                 closePeerContext(context);
-                setStatus("WebRTC connection failed. Generate a fresh invite.", true);
+                setStatus("Connection failed. Create a fresh share link and try again.", true);
                 if (state.role === "host") {
                     broadcastRoomSnapshot();
                 }
@@ -913,7 +920,7 @@
                 setStatus("Connected. Your friend is now in room " + state.roomCode + ".", "success");
                 broadcastRoomSnapshot();
             } else {
-                setStatus("Connected to host in room " + state.roomCode + ".", "success");
+                setStatus("Connected to your friend in session " + state.roomCode + ".", "success");
             }
             renderAll();
         });
@@ -927,10 +934,10 @@
             context.quality = "unknown";
             context.rttMs = null;
             if (state.role === "host") {
-                setStatus("A participant disconnected.", "progress");
+                setStatus("Your friend disconnected. You can create a new link to reconnect.", "progress");
                 broadcastRoomSnapshot();
             } else {
-                setStatus("Connection to host closed.", true);
+                setStatus("Connection closed. Ask your friend for a fresh invite link.", true);
             }
             renderAll();
         });
@@ -942,7 +949,7 @@
 
     async function createInviteLink() {
         if (state.role !== "host") {
-            setStatus("Create a room before generating invites.", true);
+            setStatus("Start by creating a room first.", true);
             return;
         }
 
@@ -972,7 +979,12 @@
             };
 
             ui.inviteOutput.value = buildLink("offer", payload);
-            setStatus("Step 3: invite link ready. Share it and wait for friend's response link.", "progress");
+            const copied = await copyText(ui.inviteOutput.value);
+            if (copied) {
+                setStatus("Step 3: share link ready and copied. Send it to your friend.", "progress");
+            } else {
+                setStatus("Step 3: share link ready. Copy it and send it to your friend.", "progress");
+            }
             renderAll();
         } catch (error) {
             state.pendingInvites.delete(inviteId);
@@ -983,13 +995,20 @@
 
     async function applyAnswerFromInput() {
         if (state.role !== "host") {
-            setStatus("Only the host can apply response links.", true);
+            setStatus("Only the inviter can use this step.", true);
             return;
         }
 
-        const token = parseTokenFromText(ui.answerInput.value, "answer");
+        let token = parseTokenFromText(ui.answerInput.value, "answer");
         if (!token) {
-            setStatus("Paste a response link from your friend first.", true);
+            const clipboard = await readClipboardText();
+            if (clipboard) {
+                ui.answerInput.value = clipboard;
+                token = parseTokenFromText(clipboard, "answer");
+            }
+        }
+        if (!token) {
+            setStatus("Could not find a reply link in clipboard. Ask your friend to resend it.", true);
             return;
         }
 
@@ -1002,15 +1021,15 @@
         const payload = decodeAndValidateToken(rawToken, "answer");
 
         if (payload.roomCode !== state.roomCode) {
-            throw new Error("Response link is for room " + payload.roomCode + ", but host room is " + state.roomCode + ".");
+            throw new Error("This reply link belongs to session " + payload.roomCode + ", not " + state.roomCode + ".");
         }
         if (payload.roomSecret !== state.roomSecret) {
-            throw new Error("Response link secret mismatch. Ask friend to regenerate from latest invite.");
+            throw new Error("This reply link does not match your latest share link. Ask your friend to reopen it.");
         }
 
         const context = state.pendingInvites.get(payload.inviteId);
         if (!context) {
-            throw new Error("No pending invite found for this response link. Generate a new invite.");
+            throw new Error("This reply link is not active anymore. Create and send a fresh share link.");
         }
 
         context.remotePeerId = payload.guestId || "";
@@ -1023,7 +1042,7 @@
 
         state.pendingInvites.delete(payload.inviteId);
         state.hostPeers.set(payload.inviteId, context);
-        setStatus("Response applied. Finalizing connection...", "progress");
+        setStatus("Reply link accepted. Finishing connection...", "progress");
         renderAll();
     }
 
@@ -1031,7 +1050,7 @@
         const payload = decodeAndValidateToken(rawToken, "offer");
 
         if (state.role === "host" && (state.hostPeers.size > 0 || state.pendingInvites.size > 0)) {
-            throw new Error("You are already hosting active participants. Reset room before joining another invite.");
+            throw new Error("You are already in invite mode with active participants. Click Start over first.");
         }
 
         teardownConnections();
@@ -1044,8 +1063,8 @@
 
         ui.offerInput.value = buildLink("offer", payload);
         ui.answerOutput.value = "";
-        setHeadline("Join mode: room " + state.roomCode + " invite accepted.");
-        setStatus("Generating your response link...", "progress");
+        setHeadline("Join mode: invite accepted for session " + state.roomCode + ".");
+        setStatus("Creating your reply link...", "progress");
         renderAll();
 
         const context = createBasePeerContext(payload.inviteId);
@@ -1079,8 +1098,25 @@
         };
 
         ui.answerOutput.value = buildLink("answer", answerPayload);
-        setStatus("Step 3: response link ready. Send it back to host.", "progress");
+        const copied = await copyText(ui.answerOutput.value);
+        if (copied) {
+            setStatus("Step 3: reply link ready and copied. Send it back to your friend.", "progress");
+        } else {
+            setStatus("Step 3: reply link ready. Copy it and send it back to your friend.", "progress");
+        }
         renderAll();
+    }
+
+    async function readClipboardText() {
+        if (!navigator.clipboard || !navigator.clipboard.readText) {
+            return "";
+        }
+
+        try {
+            return (await navigator.clipboard.readText()) || "";
+        } catch (error) {
+            return "";
+        }
     }
     function sendMessage(context, payload) {
         if (!context || !context.channel || context.channel.readyState !== "open") {
@@ -1234,7 +1270,7 @@
 
         copyText(value).then(function (copied) {
             if (copied) {
-                setStatus(successMessage, false);
+                setStatus(successMessage, "success");
             } else {
                 setStatus("Clipboard blocked. Copy manually from text area.", true);
             }
@@ -1341,28 +1377,28 @@
         const payload = decodePayload(decodedToken);
 
         if (!payload || typeof payload !== "object") {
-            throw new Error("Handshake payload is invalid.");
+            throw new Error("This link looks broken. Ask for a fresh link.");
         }
         if (payload.v !== SIGNAL_VERSION) {
-            throw new Error("Unsupported handshake payload version.");
+            throw new Error("This link is from an unsupported version. Ask for a fresh link.");
         }
         if (payload.kind !== expectedKind) {
-            throw new Error("Expected " + expectedKind + " payload, received " + (payload.kind || "unknown") + ".");
+            throw new Error("This is the wrong type of link for this step.");
         }
         if (typeof payload.roomCode !== "string" || !payload.roomCode) {
-            throw new Error("Missing room code in handshake payload.");
+            throw new Error("This link is missing a session code.");
         }
         if (typeof payload.roomSecret !== "string" || !payload.roomSecret) {
-            throw new Error("Missing room secret in handshake payload.");
+            throw new Error("This link is missing secure session data.");
         }
         if (typeof payload.inviteId !== "string" || !payload.inviteId) {
-            throw new Error("Missing invite id in handshake payload.");
+            throw new Error("This link is missing invite details.");
         }
         if (typeof payload.sdp !== "string" || !payload.sdp) {
-            throw new Error("Missing SDP in handshake payload.");
+            throw new Error("This link is incomplete. Ask for a fresh one.");
         }
         if (payload.exp && Date.now() > payload.exp) {
-            throw new Error("Handshake link expired. Generate a fresh invite.");
+            throw new Error("This link expired. Create and share a fresh one.");
         }
 
         return payload;
@@ -1421,7 +1457,7 @@
                 await joinFromOfferToken(offerToken);
             } catch (error) {
                 console.error("[RemoteRoom] Join from offer failed:", error);
-                setStatus(error.message || "Could not join from invite link.", true);
+                setStatus(error.message || "Could not join from that invite link.", true);
             }
             clearLocationHash();
             return;
@@ -1436,10 +1472,10 @@
                     ui.answerInput.value = "";
                 } catch (error) {
                     console.error("[RemoteRoom] Auto apply response failed:", error);
-                    setStatus(error.message || "Could not auto-apply response link.", true);
+                    setStatus(error.message || "Could not use that reply link automatically.", true);
                 }
             } else {
-                setStatus("Response link detected. Paste it into the host tab.", "progress");
+                setStatus("Reply link detected. Open invite mode and paste it there.", "progress");
             }
             renderAll();
             clearLocationHash();
