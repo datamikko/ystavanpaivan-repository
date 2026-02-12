@@ -343,6 +343,10 @@
         }
 
         function getFriendlyCameraError(error) {
+            if (error && typeof error.message === "string" && (error.message.includes("model.json") || error.message.includes("metadata.json"))) {
+                return "Camera started, but model loading failed. Check network and refresh.";
+            }
+
             if (error && (error.name === "NotAllowedError" || error.name === "PermissionDeniedError")) {
                 return "Please allow camera access in your browser and try again.";
             }
@@ -361,20 +365,26 @@
         async function start() {
             if (isRunning) return;
             startBtn.disabled = true;
-            stateText.textContent = "Loading the love detector...";
+            stateText.textContent = "Starting camera...";
 
             try {
-                stateText.textContent = "Requesting camera permission...";
-                await requestCameraPermissionPrompt();
+                // Start webcam first while we are still in direct click flow.
+                webcam = new tmImage.Webcam(320, 320, true);
+                try {
+                    await webcam.setup();
+                    await webcam.play();
+                } catch (cameraError) {
+                    // Retry once via explicit browser permission request.
+                    await requestCameraPermissionPrompt();
+                    await webcam.setup();
+                    await webcam.play();
+                }
 
                 stateText.textContent = "Loading the love detector...";
                 if (!model) {
                     model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
                 }
 
-                webcam = new tmImage.Webcam(320, 320, true);
-                await webcam.setup();
-                await webcam.play();
                 webcamContainer.innerHTML = "";
                 webcamContainer.appendChild(webcam.canvas);
                 webcamContainer.style.display = "grid";
@@ -384,6 +394,12 @@
                 loop();
             } catch (error) {
                 applySceneClass("idle");
+                if (webcam) {
+                    webcam.stop();
+                    webcam = null;
+                }
+                webcamContainer.innerHTML = "";
+                webcamContainer.style.display = "none";
                 stateText.textContent = getFriendlyCameraError(error);
                 startBtn.disabled = false;
             }
