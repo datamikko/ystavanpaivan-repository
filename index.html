@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ystavanpaiva Heart Detector</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100dvh;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            transition: background 0.45s ease;
+        }
+
+        body.state-idle {
+            background: radial-gradient(circle at 30% 20%, #ffe9f4, #ffd6e8 45%, #ffc6e0);
+        }
+
+        body.state-waiting {
+            background: radial-gradient(circle at 20% 10%, #ffeef8, #ffd8ea 40%, #ffcde3);
+        }
+
+        body.state-friend {
+            background: radial-gradient(circle at 20% 10%, #fff3ff, #f6dcff 40%, #edccff);
+        }
+
+        body.state-heart {
+            background: radial-gradient(circle at 30% 20%, #ffe6f2, #ffb9d8 40%, #ff8fbe);
+        }
+
+        .app {
+            position: relative;
+            width: 100%;
+            min-height: 100dvh;
+            display: grid;
+            place-items: center;
+            padding: 20px;
+            isolation: isolate;
+        }
+
+        .float-hearts {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.4;
+            z-index: -1;
+        }
+
+        .float-hearts::before,
+        .float-hearts::after {
+            content: "❤  ❤  ❤  ❤  ❤  ❤  ❤";
+            position: absolute;
+            left: -10%;
+            width: 120%;
+            font-size: clamp(1rem, 2.6vw, 1.6rem);
+            color: rgba(255, 255, 255, 0.92);
+            letter-spacing: 8px;
+            animation: drift 18s linear infinite;
+        }
+
+        .float-hearts::before {
+            top: 18%;
+        }
+
+        .float-hearts::after {
+            top: 68%;
+            animation-duration: 24s;
+            animation-direction: reverse;
+            opacity: 0.7;
+        }
+
+        @keyframes drift {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(12%); }
+        }
+
+        .stage {
+            width: min(900px, 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            text-align: center;
+            padding: 18px;
+        }
+
+        .header {
+            margin: 0;
+            font-size: clamp(1.8rem, 6vw, 3.4rem);
+            letter-spacing: 0.02em;
+            color: #ffffff;
+            text-shadow: 0 6px 18px rgba(183, 39, 96, 0.36);
+        }
+
+        #start-btn {
+            border: 0;
+            border-radius: 999px;
+            padding: 14px 28px;
+            background: #d72660;
+            color: #fff;
+            font-size: 1.06rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 10px 24px rgba(170, 25, 86, 0.35);
+            transition: transform 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        #start-btn:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 14px 30px rgba(170, 25, 86, 0.4);
+        }
+
+        #start-btn:disabled {
+            opacity: 0.8;
+            cursor: default;
+            transform: none;
+        }
+
+        .state-text {
+            margin: 0;
+            font-size: clamp(1.2rem, 4.5vw, 2.2rem);
+            font-weight: 700;
+            line-height: 1.25;
+            max-width: 760px;
+            text-wrap: balance;
+            transition: color 0.3s ease;
+        }
+
+        body.state-idle .state-text {
+            color: #8f2c57;
+        }
+
+        body.state-waiting .state-text {
+            color: #90355d;
+        }
+
+        body.state-friend .state-text {
+            color: #6a39a1;
+        }
+
+        body.state-heart .state-text {
+            color: #ffffff;
+            text-shadow: 0 8px 22px rgba(157, 19, 82, 0.42);
+        }
+
+        .heart {
+            font-size: clamp(2.4rem, 10vw, 7rem);
+            line-height: 1;
+            display: none;
+        }
+
+        .heart.pulse {
+            display: block;
+            animation: pulse 1s infinite ease-in-out;
+            filter: drop-shadow(0 8px 16px rgba(198, 22, 97, 0.35));
+        }
+
+        #webcam-container {
+            position: fixed;
+            left: 14px;
+            bottom: 14px;
+            width: min(30vw, 160px);
+            aspect-ratio: 1 / 1;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.84);
+            border: 2px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 10px 24px rgba(76, 23, 46, 0.22);
+            place-items: center;
+            overflow: hidden;
+            backdrop-filter: blur(4px);
+        }
+
+        #webcam-container canvas {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover;
+        }
+
+        .dev-controls {
+            position: fixed;
+            right: 12px;
+            bottom: 12px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            max-width: min(90vw, 560px);
+            z-index: 3;
+        }
+
+        .dev-btn {
+            border: 1px solid rgba(255, 255, 255, 0.65);
+            border-radius: 999px;
+            padding: 7px 11px;
+            background: rgba(255, 255, 255, 0.44);
+            color: #6d2443;
+            font-size: 0.86rem;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.14); }
+        }
+
+        body.state-heart .float-hearts {
+            opacity: 0.8;
+        }
+
+        @media (max-width: 640px) {
+            #webcam-container {
+                width: 120px;
+                border-radius: 16px;
+            }
+
+            .dev-controls {
+                left: 10px;
+                right: 10px;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="app">
+        <section class="stage">
+            <div class="float-hearts" aria-hidden="true"></div>
+            <h1 class="header">Happy Ystavanpaiva</h1>
+            <button id="start-btn" type="button">❤ Start</button>
+            <p id="state-text" class="state-text"></p>
+            <div id="heart-line" class="heart" aria-hidden="true">❤ ❤ ❤</div>
+            <div id="webcam-container" style="display: none;"></div>
+        </section>
+        <div class="dev-controls">
+            <button id="dev-waiting-btn" class="dev-btn" type="button">Dev waiting</button>
+            <button id="dev-friend-btn" class="dev-btn" type="button">Dev friend</button>
+            <button id="dev-heart-btn" class="dev-btn" type="button">Dev heart</button>
+            <button id="dev-live-btn" class="dev-btn" type="button">Dev live camera</button>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.4-alpha2/dist/teachablemachine-image.min.js"></script>
+    <script>
+        const MODEL_URL = "https://teachablemachine.withgoogle.com/models/KEawbhamB/";
+        const HEART_THRESHOLD = 0.7;
+        const FRIEND_THRESHOLD = 0.65;
+        const BACKGROUND_THRESHOLD = 0.65;
+
+        let model;
+        let webcam;
+        let animationId;
+        let isRunning = false;
+
+        const startBtn = document.getElementById("start-btn");
+        const webcamContainer = document.getElementById("webcam-container");
+        const stateText = document.getElementById("state-text");
+        const heartLine = document.getElementById("heart-line");
+        const devWaitingBtn = document.getElementById("dev-waiting-btn");
+        const devFriendBtn = document.getElementById("dev-friend-btn");
+        const devHeartBtn = document.getElementById("dev-heart-btn");
+        const devLiveBtn = document.getElementById("dev-live-btn");
+        let devOverrideMode = "live";
+
+        setIdleState();
+        startBtn.addEventListener("click", start);
+        devWaitingBtn.addEventListener("click", () => {
+            devOverrideMode = "waiting";
+            setWaitingState();
+        });
+        devFriendBtn.addEventListener("click", () => {
+            devOverrideMode = "friend";
+            setFriendState();
+        });
+        devHeartBtn.addEventListener("click", () => {
+            devOverrideMode = "heart";
+            setHeartState();
+        });
+        devLiveBtn.addEventListener("click", () => {
+            devOverrideMode = "live";
+            if (!isRunning) {
+                setIdleState();
+            }
+        });
+
+        function applySceneClass(stateName) {
+            document.body.classList.remove("state-idle", "state-waiting", "state-friend", "state-heart");
+            document.body.classList.add("state-" + stateName);
+        }
+
+        function setIdleState() {
+            applySceneClass("idle");
+            stateText.textContent = "Tap start and spread some Valentine joy at the office.";
+            heartLine.className = "heart";
+        }
+
+        function setWaitingState() {
+            applySceneClass("waiting");
+            stateText.textContent = "Waiting for a friend...";
+            heartLine.className = "heart";
+        }
+
+        function setFriendState() {
+            applySceneClass("friend");
+            stateText.textContent = "Hello friend! Show a heart to your friends 💖";
+            heartLine.className = "heart";
+        }
+
+        function setHeartState() {
+            applySceneClass("heart");
+            stateText.textContent = "💖 💖 Your friend hearts you too! 💖 💖";
+            heartLine.textContent = "❤ ❤ ❤";
+            heartLine.className = "heart pulse";
+        }
+
+        async function start() {
+            if (isRunning) return;
+            startBtn.disabled = true;
+            stateText.textContent = "Loading the love detector...";
+
+            try {
+                if (!model) {
+                    model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
+                }
+
+                webcam = new tmImage.Webcam(320, 320, true);
+                await webcam.setup();
+                await webcam.play();
+                webcamContainer.innerHTML = "";
+                webcamContainer.appendChild(webcam.canvas);
+                webcamContainer.style.display = "grid";
+
+                isRunning = true;
+                setWaitingState();
+                loop();
+            } catch (error) {
+                applySceneClass("idle");
+                stateText.textContent = "Camera permission is needed to continue.";
+                startBtn.disabled = false;
+            }
+        }
+
+        async function loop() {
+            if (!isRunning) return;
+            webcam.update();
+            await predict();
+            animationId = window.requestAnimationFrame(loop);
+        }
+
+        async function predict() {
+            if (devOverrideMode === "waiting") {
+                setWaitingState();
+                return;
+            }
+
+            if (devOverrideMode === "friend") {
+                setFriendState();
+                return;
+            }
+
+            if (devOverrideMode === "heart") {
+                setHeartState();
+                return;
+            }
+
+            const predictions = await model.predict(webcam.canvas);
+            const scoreMap = {};
+
+            for (const item of predictions) {
+                const cls = item.className.toLowerCase();
+                scoreMap[cls] = item.probability;
+            }
+
+            const heart = scoreMap.heart || 0;
+            const person = scoreMap.person || 0;
+            const hand = scoreMap.hand || 0;
+            const background = scoreMap.background || 0;
+
+            if (heart >= HEART_THRESHOLD) {
+                setHeartState();
+                return;
+            }
+
+            if (Math.max(person, hand) >= FRIEND_THRESHOLD) {
+                setFriendState();
+                return;
+            }
+
+            if (background >= BACKGROUND_THRESHOLD) {
+                setWaitingState();
+                return;
+            }
+
+            setWaitingState();
+        }
+    </script>
+</body>
+</html>
