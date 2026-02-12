@@ -262,6 +262,7 @@
         let webcam;
         let animationId;
         let isRunning = false;
+        let isStarting = false;
 
         const startBtn = document.getElementById("start-btn");
         const webcamContainer = document.getElementById("webcam-container");
@@ -338,7 +339,9 @@
                 throw new Error("NO_MEDIA_DEVICES");
             }
 
+            console.log("[HeartDetector] Requesting getUserMedia permission prompt.");
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            console.log("[HeartDetector] getUserMedia permission granted.");
             stream.getTracks().forEach((track) => track.stop());
         }
 
@@ -362,27 +365,59 @@
             return "Could not start camera. Please refresh and try again.";
         }
 
+        function cleanupWebcamUI() {
+            if (webcam) {
+                webcam.stop();
+                webcam = null;
+            }
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            webcamContainer.innerHTML = "";
+            webcamContainer.style.display = "none";
+        }
+
         async function start() {
-            if (isRunning) return;
+            if (isRunning) {
+                stateText.textContent = "Already running! Wave or show a heart 💖";
+                console.log("[HeartDetector] Start ignored: session already running.");
+                return;
+            }
+            if (isStarting) return;
+
+            isStarting = true;
             startBtn.disabled = true;
             stateText.textContent = "Starting camera...";
+            console.log("[HeartDetector] Start clicked, beginning startup flow.");
 
             try {
                 // Start webcam first while we are still in direct click flow.
                 webcam = new tmImage.Webcam(320, 320, true);
                 try {
+                    console.log("[HeartDetector] Calling webcam.setup()...");
                     await webcam.setup();
+                    console.log("[HeartDetector] webcam.setup() succeeded, calling webcam.play()...");
                     await webcam.play();
+                    console.log("[HeartDetector] webcam.play() succeeded.");
                 } catch (cameraError) {
                     // Retry once via explicit browser permission request.
+                    console.warn("[HeartDetector] Initial webcam setup failed, retrying after explicit permission prompt.", cameraError);
                     await requestCameraPermissionPrompt();
+                    console.log("[HeartDetector] Retrying webcam.setup()...");
                     await webcam.setup();
+                    console.log("[HeartDetector] Retrying webcam.play()...");
                     await webcam.play();
+                    console.log("[HeartDetector] Webcam started after retry.");
                 }
 
                 stateText.textContent = "Loading the love detector...";
                 if (!model) {
+                    console.log("[HeartDetector] Loading model and metadata...", MODEL_URL);
                     model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
+                    console.log("[HeartDetector] Model loaded successfully.");
+                } else {
+                    console.log("[HeartDetector] Reusing already-loaded model.");
                 }
 
                 webcamContainer.innerHTML = "";
@@ -390,26 +425,35 @@
                 webcamContainer.style.display = "grid";
 
                 isRunning = true;
+                isStarting = false;
                 setWaitingState();
+                console.log("[HeartDetector] Startup complete, entering prediction loop.");
                 loop();
             } catch (error) {
                 applySceneClass("idle");
-                if (webcam) {
-                    webcam.stop();
-                    webcam = null;
-                }
-                webcamContainer.innerHTML = "";
-                webcamContainer.style.display = "none";
+                cleanupWebcamUI();
+                isRunning = false;
+                isStarting = false;
                 stateText.textContent = getFriendlyCameraError(error);
                 startBtn.disabled = false;
+                console.error("[HeartDetector] Startup failed:", error);
             }
         }
 
         async function loop() {
             if (!isRunning) return;
-            webcam.update();
-            await predict();
-            animationId = window.requestAnimationFrame(loop);
+            try {
+                webcam.update();
+                await predict();
+                animationId = window.requestAnimationFrame(loop);
+            } catch (error) {
+                isRunning = false;
+                cleanupWebcamUI();
+                applySceneClass("idle");
+                stateText.textContent = "Oops, camera session stopped. Press Start again.";
+                startBtn.disabled = false;
+                console.error("[HeartDetector] Loop crashed:", error);
+            }
         }
 
         async function predict() {
