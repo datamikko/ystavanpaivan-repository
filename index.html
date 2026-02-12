@@ -194,6 +194,10 @@
             z-index: 3;
         }
 
+        .dev-controls.hidden {
+            display: none;
+        }
+
         .dev-btn {
             border: 1px solid rgba(255, 255, 255, 0.65);
             border-radius: 999px;
@@ -238,7 +242,7 @@
             <div id="heart-line" class="heart" aria-hidden="true">❤ ❤ ❤</div>
             <div id="webcam-container" style="display: none;"></div>
         </section>
-        <div class="dev-controls">
+        <div class="dev-controls hidden">
             <button id="dev-waiting-btn" class="dev-btn" type="button">Dev waiting</button>
             <button id="dev-friend-btn" class="dev-btn" type="button">Dev friend</button>
             <button id="dev-heart-btn" class="dev-btn" type="button">Dev heart</button>
@@ -267,10 +271,19 @@
         const devFriendBtn = document.getElementById("dev-friend-btn");
         const devHeartBtn = document.getElementById("dev-heart-btn");
         const devLiveBtn = document.getElementById("dev-live-btn");
+        const devControls = document.querySelector(".dev-controls");
         let devOverrideMode = "live";
+        let devButtonsVisible = false;
 
         setIdleState();
         startBtn.addEventListener("click", start);
+        document.addEventListener("keydown", (event) => {
+            const isToggleShortcut = (event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "d";
+            if (!isToggleShortcut || event.repeat) return;
+            event.preventDefault();
+            devButtonsVisible = !devButtonsVisible;
+            devControls.classList.toggle("hidden", !devButtonsVisible);
+        });
         devWaitingBtn.addEventListener("click", () => {
             devOverrideMode = "waiting";
             setWaitingState();

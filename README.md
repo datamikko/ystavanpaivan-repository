@@ -25,7 +25,7 @@ If you do not know... try saying hello nicely and see what happens. 💖
 No spoilers in this README.  
 Some magic is better discovered than explained. ✨
 
-## Hot Potato License 🥔
+## License potato info 🥔
 
 The official cosmic legal text lives in `LICENSE`.  
 Handle with care. Pass with joy.
