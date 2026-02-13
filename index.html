@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -76,8 +77,13 @@
         }
 
         @keyframes drift {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(12%); }
+            0% {
+                transform: translateX(0);
+            }
+
+            100% {
+                transform: translateX(12%);
+            }
         }
 
         .stage {
@@ -162,6 +168,21 @@
             filter: drop-shadow(0 8px 16px rgba(198, 22, 97, 0.35));
         }
 
+        #amor {
+            background-image: url("media/amorcc.png");
+            width: 80%;
+            height: auto;
+            background-position: center;
+            background-size: contain;
+            background-repeat: no-repeat;
+            aspect-ratio: 1.17;
+            position: fixed;
+            z-index: -1;
+            opacity: 0.01;
+            visibility: hidden;
+
+        }
+
         #webcam-container {
             position: fixed;
             left: 14px;
@@ -211,9 +232,17 @@
         }
 
         @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.14); }
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.14);
+            }
         }
+
 
         body.state-heart .float-hearts {
             opacity: 0.8;
@@ -234,10 +263,12 @@
     </style>
     <link rel="stylesheet" href="remote-room.css">
 </head>
+
 <body>
     <main class="app">
         <section class="stage">
             <div class="float-hearts" aria-hidden="true"></div>
+            <div id="amor"></div>
             <h1 class="header">Happy Ystavanpaiva</h1>
             <button id="start-btn" type="button">&#10084; Start</button>
             <p id="state-text" class="state-text"></p>
@@ -332,7 +363,8 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     <script>
         const MODEL_URL = "https://teachablemachine.withgoogle.com/models/KEawbhamB/";
         const HEART_THRESHOLD = 0.7;
@@ -344,6 +376,7 @@
         let animationId;
         let isRunning = false;
         let isStarting = false;
+        let intId;
 
         const startBtn = document.getElementById("start-btn");
         const webcamContainer = document.getElementById("webcam-container");
@@ -355,17 +388,24 @@
         const devLiveBtn = document.getElementById("dev-live-btn");
         const devControls = document.querySelector(".dev-controls");
         let devOverrideMode = "live";
+        const amor = document.getElementById("amor");
         let devButtonsVisible = false;
+        const resetAmor = () => {
+            amor.style.visibility = "hidden";
+            amor.style.opacity = 0.01;
+            clearInterval(intId)
+            
+        }
 
         setIdleState();
         startBtn.addEventListener("click", start);
-        document.addEventListener("keydown", (event) => {
-            const isToggleShortcut = (event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "d";
-            if (!isToggleShortcut || event.repeat) return;
-            event.preventDefault();
-            devButtonsVisible = !devButtonsVisible;
-            devControls.classList.toggle("hidden", !devButtonsVisible);
-        });
+        //document.addEventListener("keydown", (event) => {
+          //  const isToggleShortcut = (event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "d";
+            //if (!isToggleShortcut || event.repeat) return;
+            //event.preventDefault();
+            //devButtonsVisible = !devButtonsVisible;
+            //devControls.classList.toggle("hidden", !devButtonsVisible);
+       // });
         devWaitingBtn.addEventListener("click", () => {
             devOverrideMode = "waiting";
             setWaitingState();
@@ -385,6 +425,8 @@
             }
         });
 
+
+
         function applySceneClass(stateName) {
             document.body.classList.remove("state-idle", "state-waiting", "state-friend", "state-heart");
             document.body.classList.add("state-" + stateName);
@@ -394,18 +436,14 @@
             applySceneClass("idle");
             stateText.textContent = "Tap start and spread some Valentine joy at the office.";
             heartLine.className = "heart";
-            if (window.remoteRoom && typeof window.remoteRoom.onLocalStateChange === "function") {
-                window.remoteRoom.onLocalStateChange("idle");
-            }
+            resetAmor()
         }
 
         function setWaitingState() {
             applySceneClass("waiting");
             stateText.textContent = "Waiting for a friend...";
             heartLine.className = "heart";
-            if (window.remoteRoom && typeof window.remoteRoom.onLocalStateChange === "function") {
-                window.remoteRoom.onLocalStateChange("waiting");
-            }
+            resetAmor()
         }
 
         function setFriendState() {
@@ -415,17 +453,32 @@
             }
             stateText.textContent = "Hello friend! Show a heart to your friends.";
             heartLine.className = "heart";
+            resetAmor()
         }
 
         function setHeartState() {
             applySceneClass("heart");
-            if (window.remoteRoom && typeof window.remoteRoom.onLocalStateChange === "function") {
-                window.remoteRoom.onLocalStateChange("heart");
-            }
-            stateText.textContent = "Your friend hearts you too!";
-            heartLine.textContent = "\u2764 \u2764 \u2764";
-            heartLine.className = "heart pulse";
+            stateText.textContent = "💖 💖 Your friend hearts you too! 💖 💖";
+            heartLine.textContent = "❤ ❤ ❤";
+            heartLine.className = "heart pulse"
+            amor.style.visibility = "visible";
+
+            intId = setInterval(function asd() 
+            {
+                if (Number(window.getComputedStyle(amor).opacity) >= 0.33) {
+                    console.log(intId)
+
+                    clearInterval(intId)
+                    return
+                }
+                console.log(Number(window.getComputedStyle(amor).opacity))
+
+                amor.style.opacity = Number(window.getComputedStyle(amor).opacity) + 0.01;
+                },50
+            )
         }
+
+ 
 
         function getFriendlyCameraError(error) {
             if (error && error.message === "TMIMAGE_NOT_LOADED") {
@@ -531,6 +584,7 @@
             }
         }
 
+
         async function predict() {
             if (devOverrideMode === "waiting") {
                 setWaitingState();
@@ -580,5 +634,5 @@
     </script>
     <script src="remote-room.js"></script>
 </body>
-</html>
 
+</html>
