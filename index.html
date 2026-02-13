@@ -14,7 +14,8 @@
             margin: 0;
             min-height: 100dvh;
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
             transition: background 0.45s ease;
         }
 
@@ -54,7 +55,7 @@
 
         .float-hearts::before,
         .float-hearts::after {
-            content: "❤  ❤  ❤  ❤  ❤  ❤  ❤";
+            content: "\2764  \2764  \2764  \2764  \2764  \2764  \2764";
             position: absolute;
             left: -10%;
             width: 120%;
@@ -260,6 +261,7 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="remote-room.css">
 </head>
 
 <body>
@@ -268,10 +270,89 @@
             <div class="float-hearts" aria-hidden="true"></div>
             <div id="amor"></div>
             <h1 class="header">Happy Ystavanpaiva</h1>
-            <button id="start-btn" type="button">❤ Start</button>
+            <button id="start-btn" type="button">&#10084; Start</button>
             <p id="state-text" class="state-text"></p>
-            <div id="heart-line" class="heart" aria-hidden="true">❤ ❤ ❤</div>
+            <div id="heart-line" class="heart" aria-hidden="true">&#10084; &#10084; &#10084;</div>
             <div id="webcam-container" style="display: none;"></div>
+
+            <section id="remote-room-panel" class="remote-room-panel">
+                <h2 class="remote-room-title">Share Hearts With a Friend</h2>
+                <p class="remote-intro">No sign-up needed: one person sends a link, the other sends one back.</p>
+                <div class="remote-mode-switch" role="tablist" aria-label="Remote room mode">
+                    <button id="remote-mode-host-btn" class="remote-mode-btn remote-mode-active" type="button" role="tab" aria-selected="true">I am inviting</button>
+                    <button id="remote-mode-join-btn" class="remote-mode-btn" type="button" role="tab" aria-selected="false">I am joining</button>
+                </div>
+                <p id="remote-room-headline" class="remote-room-line">Invite mode: create a room and send a link to your friend.</p>
+                <p id="remote-room-code" class="remote-room-line">Session code: -</p>
+                <p id="remote-status" class="remote-status-banner" role="status" aria-live="polite">No active session yet.</p>
+
+                <ol id="remote-host-steps" class="remote-stepper">
+                    <li id="remote-host-step-1">Start</li>
+                    <li id="remote-host-step-2">Send link</li>
+                    <li id="remote-host-step-3">Paste reply link</li>
+                    <li id="remote-host-step-4">Done</li>
+                </ol>
+
+                <ol id="remote-join-steps" class="remote-stepper remote-hidden">
+                    <li id="remote-join-step-1">Paste invite link</li>
+                    <li id="remote-join-step-2">Create reply link</li>
+                    <li id="remote-join-step-3">Send reply</li>
+                    <li id="remote-join-step-4">Done</li>
+                </ol>
+
+                <div class="remote-field">
+                    <label for="remote-display-name">Your name</label>
+                    <input id="remote-display-name" type="text" maxlength="24" placeholder="Friend">
+                </div>
+
+                <div id="remote-host-flow">
+                    <div class="remote-room-row">
+                        <button id="remote-create-room-btn" class="remote-primary-btn" type="button">1. Start inviting</button>
+                        <button id="remote-reset-room-btn" type="button" disabled>Start over</button>
+                    </div>
+
+                    <div class="remote-box">
+                        <label for="remote-invite-output">Link to send your friend</label>
+                        <p class="remote-help">Your friend opens this link and gets a reply link for you.</p>
+                        <textarea id="remote-invite-output" class="remote-hidden-url" readonly placeholder="Create a room, then generate an invite link."></textarea>
+                        <div class="remote-inline-actions">
+                            <button id="remote-create-invite-btn" class="remote-primary-btn" type="button" disabled>2. Copy share link</button>
+                            <button id="remote-copy-invite-btn" type="button" disabled>Copy again</button>
+                        </div>
+                    </div>
+
+                    <div class="remote-box">
+                        <label for="remote-answer-input">Reply link from friend</label>
+                        <p class="remote-help">Paste the reply your friend sends back.</p>
+                        <textarea id="remote-answer-input" class="remote-hidden-url" placeholder="Paste response link from your friend here."></textarea>
+                        <button id="remote-apply-answer-btn" class="remote-primary-btn" type="button" disabled>3. Connect using reply link</button>
+                    </div>
+                </div>
+
+                <div id="remote-join-flow" class="remote-hidden">
+                    <div class="remote-box">
+                        <label for="remote-offer-input">Invite link from friend</label>
+                        <p class="remote-help">Best option: open the invite link directly. Or copy it first, then tap below.</p>
+                        <textarea id="remote-offer-input" class="remote-hidden-url" placeholder="Paste invite link here, then generate your response link."></textarea>
+                        <button id="remote-generate-response-btn" class="remote-primary-btn" type="button">1. Use invite link from clipboard</button>
+                    </div>
+
+                    <div id="remote-join-box" class="remote-box">
+                        <label for="remote-answer-output">Your reply link</label>
+                        <p class="remote-help">Send this back to your friend.</p>
+                        <textarea id="remote-answer-output" class="remote-hidden-url" readonly placeholder="Open an invite link first to generate this."></textarea>
+                        <button id="remote-copy-answer-btn" class="remote-primary-btn" type="button" disabled>2. Copy reply link</button>
+                    </div>
+                </div>
+
+                <p id="remote-summary" class="remote-room-line">Participants: just you.</p>
+                <p id="remote-next-action" class="remote-next-action" aria-live="polite">Next: choose what you want to do.</p>
+                <div id="remote-empty-state" class="remote-empty-state">
+                    <strong>No one is connected yet.</strong>
+                    <span>Start with step 1 in your selected mode.</span>
+                </div>
+                <ul id="remote-participants" class="remote-participants"></ul>
+            </section>
         </section>
         <div class="dev-controls hidden">
             <button id="dev-waiting-btn" class="dev-btn" type="button">Dev waiting</button>
@@ -367,7 +448,10 @@
 
         function setFriendState() {
             applySceneClass("friend");
-            stateText.textContent = "Hello friend! Show a heart to your friends 💖";
+            if (window.remoteRoom && typeof window.remoteRoom.onLocalStateChange === "function") {
+                window.remoteRoom.onLocalStateChange("friend");
+            }
+            stateText.textContent = "Hello friend! Show a heart to your friends.";
             heartLine.className = "heart";
             resetAmor()
         }
@@ -431,7 +515,7 @@
 
         async function start() {
             if (isRunning) {
-                stateText.textContent = "Already running! Wave or show a heart 💖";
+                stateText.textContent = "Already running! Wave or show a heart.";
                 console.log("[HeartDetector] Start ignored: session already running.");
                 return;
             }
@@ -548,6 +632,7 @@
             setWaitingState();
         }
     </script>
+    <script src="remote-room.js"></script>
 </body>
 
 </html>
